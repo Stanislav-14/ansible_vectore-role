@@ -1,0 +1,15 @@
+[sources.my_logs]
+type = "file"
+include = ["/var/log/syslog"]
+
+[sinks.console]
+type = "console"
+inputs = ["my_logs"]
+encoding.codec = "json"
+
+[sinks.clickhouse]
+type = "clickhouse"
+inputs = ["my_logs"]
+endpoint = "http://158.160.225.79:8123"
+database = "logs"
+table = "vector_logs"
