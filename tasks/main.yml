@@ -1,0 +1,76 @@
+---
+- name: Create vector user
+  ansible.builtin.user:
+    name: "{{ vector_user }}"
+    system: yes
+    shell: /sbin/nologin
+    create_home: no
+
+- name: Create install directory
+  ansible.builtin.file:
+    path: "{{ vector_install_dir }}"
+    state: directory
+    owner: "{{ vector_user }}"
+    group: "{{ vector_user }}"
+    mode: '0755'
+
+- name: Download Vector archive
+  ansible.builtin.get_url:
+    url: "{{ vector_download_url }}"
+    dest: "/tmp/vector.tar.gz"
+    mode: '0644'
+
+- name: Extract Vector archive
+  ansible.builtin.unarchive:
+    src: "/tmp/vector.tar.gz"
+    dest: "{{ vector_install_dir }}"
+    remote_src: yes
+    extra_opts: [--strip-components=1]
+    owner: "{{ vector_user }}"
+    group: "{{ vector_user }}"
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: /etc/vector
+    state: directory
+    owner: "{{ vector_user }}"
+    group: "{{ vector_user }}"
+    mode: '0755'
+
+- name: Deploy vector config
+  ansible.builtin.template:
+    src: vector.toml.j2
+    dest: /etc/vector/vector.toml
+    owner: "{{ vector_user }}"
+    group: "{{ vector_user }}"
+    mode: '0644'
+- name: Create systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/vector.service
+    content: |
+      [Unit]
+      Description=Vector Service
+      After=network.target
+
+      [Service]
+      User={{ vector_user }}
+      Group={{ vector_user }}
+      ExecStart={{ vector_install_dir }}/vector-x86_64-unknown-linux-gnu/bin/vector --config /etc/vector/vector.toml
+      Restart=always
+      LimitNOFILE=65536
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Restart vector
+- name: Create Vector data directory
+  ansible.builtin.file:
+    path: /var/lib/vector
+    state: directory
+    owner: "{{ vector_user }}"
+    group: "{{ vector_user }}"
+    mode: '0755'
+- name: Enable and start Vector
+  ansible.builtin.systemd:
+    name: vector
+    enabled: yes
+    state: started

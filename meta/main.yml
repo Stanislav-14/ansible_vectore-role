@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+galaxy_info:
+  author: Stanislav
+  description: vector install
+  company: no company
+  license: MIT
+  min_ansible_version: 2.20.3
